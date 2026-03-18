@@ -1,0 +1,10 @@
+var x = 10;
+var y = 20;
+
+if (x < y) {
+    print x + y * 2;
+} else {
+    while (x > 0) {
+        x = x - 1;
+    }
+}

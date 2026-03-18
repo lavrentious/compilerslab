@@ -1,12 +1,144 @@
+#!/usr/bin/env bun
+
+import { AstPrinter } from "./ast-printer.ts";
 import { Lexer } from "./lexer.ts";
 import { Parser } from "./parser.ts";
 
-const codeExample = "var x = 123; print x + 5;";
+type OutputMode = "tokens" | "ast" | "tree";
 
-const lexer = new Lexer(codeExample);
-const tokens = lexer.tokenize();
+interface CliOptions {
+  code: string | null;
+  filePath: string | null;
+  mode: OutputMode;
+  help: boolean;
+}
 
-const parser = new Parser(tokens);
-const ast = parser.parse();
+const HELP_TEXT = `mk1-ts
 
-console.dir(ast, { depth: null });
+Usage:
+  bun run src/index.ts [options] [file]
+  bun run cli -- [options] [file]
+
+Options:
+  --code "<source>"    Parse the provided source string
+  --tokens             Print lexer tokens
+  --ast                Print the parsed AST as an object
+  --tree               Print the parsed AST as a tree (default)
+  --help, -h           Show this help
+
+Input:
+  Provide either a file path, --code, or pipe source via stdin.
+`;
+
+async function main(): Promise<void> {
+  const options = parseArgs(Bun.argv.slice(2));
+
+  if (options.help) {
+    console.log(HELP_TEXT);
+    return;
+  }
+
+  const source = await resolveSource(options);
+  const lexer = new Lexer(source);
+  const tokens = lexer.tokenize();
+
+  if (options.mode === "tokens") {
+    for (const token of tokens) {
+      console.log(token.toString());
+    }
+    return;
+  }
+
+  const parser = new Parser(tokens);
+  const ast = parser.parse();
+
+  if (options.mode === "ast") {
+    console.dir(ast, { depth: null });
+    return;
+  }
+
+  new AstPrinter().printAst(ast);
+}
+
+function parseArgs(args: string[]): CliOptions {
+  const options: CliOptions = {
+    code: null,
+    filePath: null,
+    mode: "tree",
+    help: false,
+  };
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg == null) {
+      continue;
+    }
+
+    switch (arg) {
+      case "--help":
+      case "-h":
+        options.help = true;
+        break;
+      case "--code": {
+        const value = args[index + 1];
+        if (value == null) {
+          throw new Error("Missing value after --code.");
+        }
+        options.code = value;
+        index += 1;
+        break;
+      }
+      case "--tokens":
+        options.mode = "tokens";
+        break;
+      case "--ast":
+        options.mode = "ast";
+        break;
+      case "--tree":
+        options.mode = "tree";
+        break;
+      default:
+        if (arg.startsWith("--")) {
+          throw new Error(`Unknown option: ${arg}`);
+        }
+        if (options.filePath !== null) {
+          throw new Error("Only one input file can be provided.");
+        }
+        options.filePath = arg;
+        break;
+    }
+  }
+
+  if (options.code !== null && options.filePath !== null) {
+    throw new Error("Use either --code or a file path, not both.");
+  }
+
+  return options;
+}
+
+async function resolveSource(options: CliOptions): Promise<string> {
+  if (options.code !== null) {
+    return options.code;
+  }
+
+  if (options.filePath !== null) {
+    const file = Bun.file(options.filePath);
+    if (!(await file.exists())) {
+      throw new Error(`Input file not found: ${options.filePath}`);
+    }
+    return await file.text();
+  }
+
+  const stdin = await new Response(Bun.stdin.stream()).text();
+  if (stdin.trim().length > 0) {
+    return stdin;
+  }
+
+  throw new Error("No input provided. Pass --code, a file path, or stdin.");
+}
+
+main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(message);
+  Bun.exit(1);
+});

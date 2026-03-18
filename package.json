@@ -3,11 +3,16 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "bin": {
+    "mk1-ts": "./src/index.ts"
+  },
   "scripts": {
-    "start": "bun run src/index.ts",
+    "start": "bun run src/index.ts --help",
+    "cli": "bun run src/index.ts",
     "demo:lexer": "bun run src/demo-lexer.ts",
     "demo:parser": "bun run src/demo-parser.ts",
-    "check": "bunx tsc --noEmit"
+    "check": "bunx tsc --noEmit",
+    "build": "bun build ./src/index.ts --outdir ./dist"
   },
   "devDependencies": {
     "@types/bun": "latest"
