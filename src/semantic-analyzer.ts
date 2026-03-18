@@ -41,15 +41,17 @@ export class SemanticAnalyzer {
 
   visitStatement(statement: Statement): void {
     if (statement instanceof VarStatement) {
-      if (statement.initializer !== null) {
-        this.visitExpression(statement.initializer);
-      }
-
-      if (!this.environment.defineVariable(statement.name)) {
+      if (!this.environment.defineVariable(statement.name, false)) {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Variable '${statement.name}' is already defined.`,
         );
+        return;
+      }
+
+      if (statement.initializer !== null) {
+        this.visitExpression(statement.initializer);
+        this.environment.initializeVariable(statement.name);
       }
       return;
     }
@@ -79,16 +81,32 @@ export class SemanticAnalyzer {
 
     if (statement instanceof IfStatement) {
       this.visitExpression(statement.condition);
+      const baseEnvironment = this.environment;
+      const thenEnvironment = baseEnvironment.fork();
+
+      this.environment = thenEnvironment;
       this.visitStatement(statement.thenBranch);
+
+      let elseEnvironment: SemanticEnvironment | null = null;
       if (statement.elseBranch !== null) {
+        elseEnvironment = baseEnvironment.fork();
+        this.environment = elseEnvironment;
         this.visitStatement(statement.elseBranch);
       }
+
+      this.environment = baseEnvironment;
+      this.mergeBranchState(baseEnvironment, thenEnvironment, elseEnvironment);
       return;
     }
 
     if (statement instanceof WhileStatement) {
+      const baseEnvironment = this.environment;
       this.visitExpression(statement.condition);
+      const loopEnvironment = baseEnvironment.fork();
+      this.environment = loopEnvironment;
       this.visitStatement(statement.body);
+      this.environment = baseEnvironment;
+      this.mergeUsedState(baseEnvironment, loopEnvironment);
       return;
     }
 
@@ -112,6 +130,14 @@ export class SemanticAnalyzer {
           SemanticMessageType.ERROR,
           `Variable '${expression.name}' is not defined.`,
         );
+        return;
+      }
+
+      if (!this.environment.isVariableInitialized(expression.name)) {
+        this.pushMessage(
+          SemanticMessageType.ERROR,
+          `Variable '${expression.name}' is not initialized.`,
+        );
       }
       this.environment.useVariable(expression.name);
       return;
@@ -124,7 +150,9 @@ export class SemanticAnalyzer {
           SemanticMessageType.ERROR,
           `Variable '${expression.name}' is not defined.`,
         );
+        return;
       }
+      this.environment.initializeVariable(expression.name);
       return;
     }
 
@@ -165,6 +193,40 @@ export class SemanticAnalyzer {
         type: SemanticMessageType.WARN,
         text: `Variable '${unusedVar}' is unused.`,
       });
+    }
+  }
+
+  private mergeBranchState(
+    baseEnvironment: SemanticEnvironment,
+    thenEnvironment: SemanticEnvironment,
+    elseEnvironment: SemanticEnvironment | null,
+  ): void {
+    for (const variableName of baseEnvironment.getVisibleVariables()) {
+      const isInitializedInThen = thenEnvironment.isVariableInitialized(variableName);
+      const isInitializedInElse =
+        elseEnvironment?.isVariableInitialized(variableName) ??
+        baseEnvironment.isVariableInitialized(variableName);
+
+      baseEnvironment.setVariableInitialized(
+        variableName,
+        isInitializedInThen && isInitializedInElse,
+      );
+    }
+
+    this.mergeUsedState(baseEnvironment, thenEnvironment);
+    if (elseEnvironment !== null) {
+      this.mergeUsedState(baseEnvironment, elseEnvironment);
+    }
+  }
+
+  private mergeUsedState(
+    baseEnvironment: SemanticEnvironment,
+    branchEnvironment: SemanticEnvironment,
+  ): void {
+    for (const variableName of baseEnvironment.getVisibleVariables()) {
+      if (branchEnvironment.isVariableUsed(variableName)) {
+        baseEnvironment.setVariableUsed(variableName, true);
+      }
     }
   }
 }

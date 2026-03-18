@@ -1,6 +1,10 @@
 var x = 10;
 var y = 20;
-var z = 52;
+var z;
+
+if (z > 0) {
+    print 123;
+}
 
 if (x < y) {
     print x + y * 2;
