@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import chalk from "chalk";
 import { AstPrinter } from "./ast-printer.ts";
 import { Lexer } from "./lexer.ts";
 import { Parser } from "./parser.ts";
@@ -20,11 +21,13 @@ const SEMANTIC_MESSAGE_PRIORITY: Record<SemanticMessageType, number> = {
   [SemanticMessageType.INFO]: 2,
 };
 
-const ANSI_RESET = "\u001b[0m";
-const SEMANTIC_MESSAGE_COLOR: Record<SemanticMessageType, string> = {
-  [SemanticMessageType.ERROR]: "\u001b[31m",
-  [SemanticMessageType.WARN]: "\u001b[33m",
-  [SemanticMessageType.INFO]: "\u001b[36m",
+const SEMANTIC_MESSAGE_COLOR: Record<
+  SemanticMessageType,
+  (text: string) => string
+> = {
+  [SemanticMessageType.ERROR]: chalk.red,
+  [SemanticMessageType.WARN]: chalk.yellow,
+  [SemanticMessageType.INFO]: chalk.cyan,
 };
 
 const HELP_TEXT = `mk1-ts
@@ -100,7 +103,9 @@ async function main(): Promise<void> {
       return;
     }
 
-    console.log("Semantic analysis completed successfully. No messages found.");
+    console.log(
+      chalk.green("Semantic analysis completed successfully. No messages found."),
+    );
     return;
   }
 
@@ -196,5 +201,5 @@ main().catch((error: unknown) => {
 
 function formatSemanticLabel(type: SemanticMessageType): string {
   const label = type.padEnd(SemanticMessageType.ERROR.length);
-  return `${SEMANTIC_MESSAGE_COLOR[type]}${label}${ANSI_RESET}`;
+  return SEMANTIC_MESSAGE_COLOR[type](label);
 }
