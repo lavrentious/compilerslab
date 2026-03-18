@@ -14,6 +14,19 @@ interface CliOptions {
   help: boolean;
 }
 
+const SEMANTIC_MESSAGE_PRIORITY: Record<SemanticMessageType, number> = {
+  [SemanticMessageType.ERROR]: 0,
+  [SemanticMessageType.WARN]: 1,
+  [SemanticMessageType.INFO]: 2,
+};
+
+const ANSI_RESET = "\u001b[0m";
+const SEMANTIC_MESSAGE_COLOR: Record<SemanticMessageType, string> = {
+  [SemanticMessageType.ERROR]: "\u001b[31m",
+  [SemanticMessageType.WARN]: "\u001b[33m",
+  [SemanticMessageType.INFO]: "\u001b[36m",
+};
+
 const HELP_TEXT = `mk1-ts
 
 Usage:
@@ -64,14 +77,19 @@ async function main(): Promise<void> {
     analyzer.analyze(ast);
 
     if (analyzer.messages.length > 0) {
+      const sortedMessages = [...analyzer.messages].sort(
+        (left, right) =>
+          SEMANTIC_MESSAGE_PRIORITY[left.type] -
+          SEMANTIC_MESSAGE_PRIORITY[right.type],
+      );
       const hasErrors = analyzer.hasErrors;
       console.log(
         hasErrors
           ? "Semantic analysis found messages:"
           : "Semantic analysis completed with messages:",
       );
-      for (const message of analyzer.messages) {
-        const label = message.type.padEnd(SemanticMessageType.ERROR.length);
+      for (const message of sortedMessages) {
+        const label = formatSemanticLabel(message.type);
         console.log(`- [${label}] ${message.text}`);
       }
 
@@ -175,3 +193,8 @@ main().catch((error: unknown) => {
   console.error(message);
   process.exit(1);
 });
+
+function formatSemanticLabel(type: SemanticMessageType): string {
+  const label = type.padEnd(SemanticMessageType.ERROR.length);
+  return `${SEMANTIC_MESSAGE_COLOR[type]}${label}${ANSI_RESET}`;
+}
