@@ -35,7 +35,6 @@ export class SemanticAnalyzer {
       this.visitStatement(statement);
     }
 
-    // Unused variables are valid code, but should still be reported.
     this.pushUnusedVariableWarnings(this.environment);
   }
 
@@ -202,7 +201,8 @@ export class SemanticAnalyzer {
     elseEnvironment: SemanticEnvironment | null,
   ): void {
     for (const variableName of baseEnvironment.getVisibleVariables()) {
-      const isInitializedInThen = thenEnvironment.isVariableInitialized(variableName);
+      const isInitializedInThen =
+        thenEnvironment.isVariableInitialized(variableName);
       const isInitializedInElse =
         elseEnvironment?.isVariableInitialized(variableName) ??
         baseEnvironment.isVariableInitialized(variableName);

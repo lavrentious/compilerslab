@@ -63,7 +63,10 @@ export class Parser {
       initializer = this.parseExpression();
     }
 
-    this.consume(TokenType.SEMICOLON, "Expected ';' after variable declaration.");
+    this.consume(
+      TokenType.SEMICOLON,
+      "Expected ';' after variable declaration.",
+    );
     return new VarStatement(name.value, initializer);
   }
 

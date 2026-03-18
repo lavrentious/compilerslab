@@ -63,7 +63,11 @@ export class AstPrinter {
     if (node instanceof BlockStatement) {
       console.log(`${indent}${marker}BlockStatement`);
       node.statements.forEach((statement, index) => {
-        this.printNode(statement, childIndent, index === node.statements.length - 1);
+        this.printNode(
+          statement,
+          childIndent,
+          index === node.statements.length - 1,
+        );
       });
       return;
     }

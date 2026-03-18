@@ -3,10 +3,7 @@
 import { AstPrinter } from "./ast-printer.ts";
 import { Lexer } from "./lexer.ts";
 import { Parser } from "./parser.ts";
-import {
-  SemanticAnalyzer,
-  SemanticMessageType,
-} from "./semantic-analyzer.ts";
+import { SemanticAnalyzer, SemanticMessageType } from "./semantic-analyzer.ts";
 
 type OutputMode = "tokens" | "ast" | "tree" | "semantic";
 
