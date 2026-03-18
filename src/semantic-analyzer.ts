@@ -43,7 +43,7 @@ export class SemanticAnalyzer {
       if (!this.environment.defineVariable(statement.name, false)) {
         this.pushMessage(
           SemanticMessageType.ERROR,
-          `Variable '${statement.name}' is already defined.`,
+          `Variable '${statement.name}' is already initialized.`,
         );
         return;
       }
