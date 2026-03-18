@@ -1,0 +1,23 @@
+var x = 10;
+var y = 20;
+var z;
+
+if (x > 0) {
+    z = 5;
+} else {
+    z = 10;
+}
+
+print z;
+
+if (x < y) {
+    print x + y * 2;
+} else {
+    var j = 52;
+    while (x > 0) {
+        x = x - 1;
+    }
+}
+
+print j;
+
