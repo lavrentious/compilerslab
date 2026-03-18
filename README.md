@@ -9,6 +9,7 @@ bun run cli -- --code "var x = 123; print x + 5;"
 bun run cli -- --tokens examples/program.mk1
 bun run cli -- --ast examples/program.mk1
 bun run cli -- --tree examples/program.mk1
+bun run cli -- --semantic examples/program.mk1
 ```
 
 You can also pipe source code:

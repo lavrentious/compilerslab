@@ -3,8 +3,12 @@
 import { AstPrinter } from "./ast-printer.ts";
 import { Lexer } from "./lexer.ts";
 import { Parser } from "./parser.ts";
+import {
+  SemanticAnalyzer,
+  SemanticMessageType,
+} from "./semantic-analyzer.ts";
 
-type OutputMode = "tokens" | "ast" | "tree";
+type OutputMode = "tokens" | "ast" | "tree" | "semantic";
 
 interface CliOptions {
   code: string | null;
@@ -24,6 +28,7 @@ Options:
   --tokens             Print lexer tokens
   --ast                Print the parsed AST as an object
   --tree               Print the parsed AST as a tree (default)
+  --semantic           Run semantic analysis and print errors or success
   --help, -h           Show this help
 
 Input:
@@ -54,6 +59,33 @@ async function main(): Promise<void> {
 
   if (options.mode === "ast") {
     console.dir(ast, { depth: null });
+    return;
+  }
+
+  if (options.mode === "semantic") {
+    const analyzer = new SemanticAnalyzer();
+    analyzer.analyze(ast);
+
+    if (analyzer.messages.length > 0) {
+      const hasErrors = analyzer.hasErrors;
+      console.log(
+        hasErrors
+          ? "Semantic analysis found messages:"
+          : "Semantic analysis completed with messages:",
+      );
+      for (const message of analyzer.messages) {
+        const label = message.type.padEnd(SemanticMessageType.ERROR.length);
+        console.log(`- [${label}] ${message.text}`);
+      }
+
+      if (hasErrors) {
+        return;
+      }
+
+      return;
+    }
+
+    console.log("Semantic analysis completed successfully. No messages found.");
     return;
   }
 
@@ -96,6 +128,10 @@ function parseArgs(args: string[]): CliOptions {
         break;
       case "--tree":
         options.mode = "tree";
+        break;
+      case "--semantic":
+      case "--check":
+        options.mode = "semantic";
         break;
       default:
         if (arg.startsWith("--")) {
@@ -140,5 +176,5 @@ async function resolveSource(options: CliOptions): Promise<string> {
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(message);
-  Bun.exit(1);
+  process.exit(1);
 });

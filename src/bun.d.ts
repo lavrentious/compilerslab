@@ -1,8 +1,6 @@
 declare namespace Bun {
   const argv: string[];
 
-  function exit(code?: number): never;
-
   function file(path: string): {
     exists(): Promise<boolean>;
     text(): Promise<string>;
@@ -12,3 +10,7 @@ declare namespace Bun {
     stream(): ReadableStream<Uint8Array>;
   };
 }
+
+declare const process: {
+  exit(code?: number): never;
+};
