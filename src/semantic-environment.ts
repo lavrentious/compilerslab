@@ -13,7 +13,12 @@ export class SemanticEnvironment {
   }
 
   useVariable(name: string): void {
-    this.usedVariables.add(name);
+    if (this.definedVariables.has(name)) {
+      this.usedVariables.add(name);
+      return;
+    }
+
+    this.parent?.useVariable(name);
   }
 
   isVariableDefined(name: string): boolean {

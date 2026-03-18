@@ -36,12 +36,7 @@ export class SemanticAnalyzer {
     }
 
     // Unused variables are valid code, but should still be reported.
-    for (const unusedVar of this.environment.getUnusedVariables()) {
-      this.messagesList.push({
-        type: SemanticMessageType.WARN,
-        text: `Variable '${unusedVar}' is unused.`,
-      });
-    }
+    this.pushUnusedVariableWarnings(this.environment);
   }
 
   visitStatement(statement: Statement): void {
@@ -77,6 +72,7 @@ export class SemanticAnalyzer {
         this.visitStatement(innerStatement);
       }
 
+      this.pushUnusedVariableWarnings(this.environment);
       this.environment = previousEnvironment;
       return;
     }
@@ -161,5 +157,14 @@ export class SemanticAnalyzer {
 
   private pushMessage(type: SemanticMessageType, text: string): void {
     this.messagesList.push({ type, text });
+  }
+
+  private pushUnusedVariableWarnings(environment: SemanticEnvironment): void {
+    for (const unusedVar of environment.getUnusedVariables()) {
+      this.messagesList.push({
+        type: SemanticMessageType.WARN,
+        text: `Variable '${unusedVar}' is unused.`,
+      });
+    }
   }
 }
