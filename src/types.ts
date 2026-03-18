@@ -34,9 +34,11 @@ export class Token {
     public readonly type: TokenType,
     public readonly value: string,
     public readonly position: number,
+    public readonly line: number,
+    public readonly column: number,
   ) {}
 
   toString(): string {
-    return `Token(${this.type}, ${this.value}, ${this.position})`;
+    return `Token(${this.type}, ${this.value}, ${this.position}, ${this.line}:${this.column})`;
   }
 }

@@ -130,7 +130,7 @@ export class Parser {
       }
 
       throw new Error(
-        `[Parser Error] Col ${equals.position}: Invalid assignment target.`,
+        `[Parser Error] Line ${equals.line}, Col ${equals.column}: Invalid assignment target.`,
       );
     }
 
@@ -237,7 +237,9 @@ export class Parser {
     }
 
     const token = this.peek();
-    throw new Error(`[Parser Error] Col ${token.position}: Expected expression.`);
+    throw new Error(
+      `[Parser Error] Line ${token.line}, Col ${token.column}: Expected expression.`,
+    );
   }
 
   private match(...types: TokenType[]): boolean {
@@ -285,6 +287,8 @@ export class Parser {
     }
 
     const token = this.peek();
-    throw new Error(`[Parser Error] Col ${token.position}: ${message}`);
+    throw new Error(
+      `[Parser Error] Line ${token.line}, Col ${token.column}: ${message}`,
+    );
   }
 }
