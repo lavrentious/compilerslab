@@ -11,6 +11,7 @@
     "cli": "bun run src/index.ts",
     "demo:lexer": "bun run src/demo-lexer.ts",
     "demo:parser": "bun run src/demo-parser.ts",
+    "test": "bun test",
     "check": "bunx tsc --noEmit",
     "build": "bun build ./src/index.ts --outdir ./dist"
   },
