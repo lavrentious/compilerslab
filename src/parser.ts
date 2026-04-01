@@ -13,7 +13,7 @@ import {
   VarStatement,
   WhileStatement,
 } from "./ast.ts";
-import type { Expression, Statement } from "./ast.ts";
+import type { Expression, SourceLocation, Statement } from "./ast.ts";
 import { Token, TokenType } from "./types.ts";
 
 export class Parser {
@@ -39,19 +39,23 @@ export class Parser {
 
   private parseStatement(): Statement {
     if (this.match(TokenType.IF)) {
-      return this.parseIfStatement();
+      return this.parseIfStatement(this.previous());
     }
 
     if (this.match(TokenType.WHILE)) {
-      return this.parseWhileStatement();
+      return this.parseWhileStatement(this.previous());
     }
 
     if (this.match(TokenType.PRINT)) {
-      return this.parsePrintStatement();
+      return this.parsePrintStatement(this.previous());
     }
 
     if (this.match(TokenType.LBRACE)) {
-      return new BlockStatement(this.parseBlock());
+      const leftBrace = this.previous();
+      return new BlockStatement(
+        this.parseBlock(),
+        this.locationFromToken(leftBrace),
+      );
     }
 
     return this.parseExpressionStatement();
@@ -60,10 +64,16 @@ export class Parser {
   private parseVarDeclaration(): Statement {
     const name = this.consume(TokenType.ID, "Expected variable name.");
     let typeName: string | null = null;
+    let typeLocation: SourceLocation | null = null;
     let initializer: Expression | null = null;
 
     if (this.match(TokenType.COLON)) {
-      typeName = this.consume(TokenType.ID, "Expected type name after ':'.").value;
+      const typeToken = this.consume(
+        TokenType.ID,
+        "Expected type name after ':'.",
+      );
+      typeName = typeToken.value;
+      typeLocation = this.locationFromToken(typeToken);
     }
 
     if (this.match(TokenType.EQ)) {
@@ -74,10 +84,16 @@ export class Parser {
       TokenType.SEMICOLON,
       "Expected ';' after variable declaration.",
     );
-    return new VarStatement(name.value, typeName, initializer);
+    return new VarStatement(
+      name.value,
+      typeName,
+      initializer,
+      this.locationFromToken(name),
+      typeLocation,
+    );
   }
 
-  private parseIfStatement(): Statement {
+  private parseIfStatement(ifToken: Token): Statement {
     this.consume(TokenType.LPAREN, "Expected '(' after 'if'.");
     const condition = this.parseExpression();
     this.consume(TokenType.RPAREN, "Expected ')' after if condition.");
@@ -89,28 +105,40 @@ export class Parser {
       elseBranch = this.parseStatement();
     }
 
-    return new IfStatement(condition, thenBranch, elseBranch);
+    return new IfStatement(
+      condition,
+      thenBranch,
+      this.locationFromToken(ifToken),
+      elseBranch,
+    );
   }
 
-  private parseWhileStatement(): Statement {
+  private parseWhileStatement(whileToken: Token): Statement {
     this.consume(TokenType.LPAREN, "Expected '(' after 'while'.");
     const condition = this.parseExpression();
     this.consume(TokenType.RPAREN, "Expected ')' after while condition.");
 
     const body = this.parseStatement();
-    return new WhileStatement(condition, body);
+    return new WhileStatement(
+      condition,
+      body,
+      this.locationFromToken(whileToken),
+    );
   }
 
-  private parsePrintStatement(): Statement {
+  private parsePrintStatement(printToken: Token): Statement {
     const value = this.parseExpression();
     this.consume(TokenType.SEMICOLON, "Expected ';' after value.");
-    return new PrintStatement(value);
+    return new PrintStatement(value, this.locationFromToken(printToken));
   }
 
   private parseExpressionStatement(): Statement {
     const expression = this.parseExpression();
     this.consume(TokenType.SEMICOLON, "Expected ';' after expression.");
-    return new ExpressionStatement(expression);
+    return new ExpressionStatement(
+      expression,
+      this.getExpressionLocation(expression),
+    );
   }
 
   private parseBlock(): Statement[] {
@@ -136,7 +164,11 @@ export class Parser {
       const value = this.parseAssignment();
 
       if (expression instanceof VariableExpression) {
-        return new AssignExpression(expression.name, value);
+        return new AssignExpression(
+          expression.name,
+          value,
+          this.locationFromToken(equals),
+        );
       }
 
       throw new Error(
@@ -151,9 +183,15 @@ export class Parser {
     let expression = this.parseLogicalAnd();
 
     while (this.match(TokenType.OR)) {
-      const operator = this.previous().type;
+      const operatorToken = this.previous();
+      const operator = operatorToken.type;
       const right = this.parseLogicalAnd();
-      expression = new BinaryExpression(expression, operator, right);
+      expression = new BinaryExpression(
+        expression,
+        operator,
+        right,
+        this.locationFromToken(operatorToken),
+      );
     }
 
     return expression;
@@ -163,9 +201,15 @@ export class Parser {
     let expression = this.parseEquality();
 
     while (this.match(TokenType.AND)) {
-      const operator = this.previous().type;
+      const operatorToken = this.previous();
+      const operator = operatorToken.type;
       const right = this.parseEquality();
-      expression = new BinaryExpression(expression, operator, right);
+      expression = new BinaryExpression(
+        expression,
+        operator,
+        right,
+        this.locationFromToken(operatorToken),
+      );
     }
 
     return expression;
@@ -175,9 +219,15 @@ export class Parser {
     let expression = this.parseComparison();
 
     while (this.match(TokenType.EQEQ, TokenType.NEQ)) {
-      const operator = this.previous().type;
+      const operatorToken = this.previous();
+      const operator = operatorToken.type;
       const right = this.parseComparison();
-      expression = new BinaryExpression(expression, operator, right);
+      expression = new BinaryExpression(
+        expression,
+        operator,
+        right,
+        this.locationFromToken(operatorToken),
+      );
     }
 
     return expression;
@@ -189,9 +239,15 @@ export class Parser {
     while (
       this.match(TokenType.LT, TokenType.LTEQ, TokenType.GT, TokenType.GTEQ)
     ) {
-      const operator = this.previous().type;
+      const operatorToken = this.previous();
+      const operator = operatorToken.type;
       const right = this.parseTerm();
-      expression = new BinaryExpression(expression, operator, right);
+      expression = new BinaryExpression(
+        expression,
+        operator,
+        right,
+        this.locationFromToken(operatorToken),
+      );
     }
 
     return expression;
@@ -201,9 +257,15 @@ export class Parser {
     let expression = this.parseFactor();
 
     while (this.match(TokenType.PLUS, TokenType.MINUS)) {
-      const operator = this.previous().type;
+      const operatorToken = this.previous();
+      const operator = operatorToken.type;
       const right = this.parseFactor();
-      expression = new BinaryExpression(expression, operator, right);
+      expression = new BinaryExpression(
+        expression,
+        operator,
+        right,
+        this.locationFromToken(operatorToken),
+      );
     }
 
     return expression;
@@ -213,9 +275,15 @@ export class Parser {
     let expression = this.parseUnary();
 
     while (this.match(TokenType.STAR, TokenType.SLASH)) {
-      const operator = this.previous().type;
+      const operatorToken = this.previous();
+      const operator = operatorToken.type;
       const right = this.parseUnary();
-      expression = new BinaryExpression(expression, operator, right);
+      expression = new BinaryExpression(
+        expression,
+        operator,
+        right,
+        this.locationFromToken(operatorToken),
+      );
     }
 
     return expression;
@@ -223,9 +291,14 @@ export class Parser {
 
   private parseUnary(): Expression {
     if (this.match(TokenType.EXCL, TokenType.MINUS)) {
-      const operator = this.previous().type;
+      const operatorToken = this.previous();
+      const operator = operatorToken.type;
       const right = this.parseUnary();
-      return new UnaryExpression(operator, right);
+      return new UnaryExpression(
+        operator,
+        right,
+        this.locationFromToken(operatorToken),
+      );
     }
 
     return this.parsePrimary();
@@ -233,23 +306,35 @@ export class Parser {
 
   private parsePrimary(): Expression {
     if (this.match(TokenType.NUMBER)) {
-      return new NumberExpression(Number(this.previous().value));
+      const token = this.previous();
+      return new NumberExpression(
+        Number(token.value),
+        this.locationFromToken(token),
+      );
     }
 
     if (this.match(TokenType.STRING)) {
-      return new StringExpression(this.previous().value);
+      const token = this.previous();
+      return new StringExpression(token.value, this.locationFromToken(token));
     }
 
     if (this.match(TokenType.TRUE)) {
-      return new BooleanExpression(true);
+      return new BooleanExpression(
+        true,
+        this.locationFromToken(this.previous()),
+      );
     }
 
     if (this.match(TokenType.FALSE)) {
-      return new BooleanExpression(false);
+      return new BooleanExpression(
+        false,
+        this.locationFromToken(this.previous()),
+      );
     }
 
     if (this.match(TokenType.ID)) {
-      return new VariableExpression(this.previous().value);
+      const token = this.previous();
+      return new VariableExpression(token.value, this.locationFromToken(token));
     }
 
     if (this.match(TokenType.LPAREN)) {
@@ -312,5 +397,13 @@ export class Parser {
     throw new Error(
       `[Parser Error] Line ${token.line}, Col ${token.column}: ${message}`,
     );
+  }
+
+  private locationFromToken(token: Token): SourceLocation {
+    return { line: token.line, column: token.column };
+  }
+
+  private getExpressionLocation(expression: Expression): SourceLocation {
+    return expression.location;
   }
 }

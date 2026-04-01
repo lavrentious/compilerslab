@@ -13,7 +13,12 @@ import {
   VarStatement,
   WhileStatement,
 } from "./ast.ts";
-import type { Expression, PrimitiveTypeName, Statement } from "./ast.ts";
+import type {
+  Expression,
+  PrimitiveTypeName,
+  SourceLocation,
+  Statement,
+} from "./ast.ts";
 import { SemanticEnvironment } from "./semantic-environment.ts";
 import { TokenType } from "./types.ts";
 
@@ -26,6 +31,7 @@ export enum SemanticMessageType {
 export interface SemanticMessage {
   type: SemanticMessageType;
   text: string;
+  location: SourceLocation | null;
 }
 
 export class SemanticAnalyzer {
@@ -42,7 +48,10 @@ export class SemanticAnalyzer {
 
   visitStatement(statement: Statement): void {
     if (statement instanceof VarStatement) {
-      const declaredType = this.resolveDeclaredType(statement.typeName);
+      const declaredType = this.resolveDeclaredType(
+        statement.typeName,
+        statement.typeLocation ?? statement.location,
+      );
       const initializerType =
         statement.initializer === null
           ? null
@@ -61,14 +70,23 @@ export class SemanticAnalyzer {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Variable '${statement.name}' requires a type annotation or initializer.`,
+          statement.location,
         );
         return;
       }
 
-      if (!this.environment.defineVariable(statement.name, variableType, false)) {
+      if (
+        !this.environment.defineVariable(
+          statement.name,
+          variableType,
+          false,
+          statement.location,
+        )
+      ) {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Variable '${statement.name}' is already defined.`,
+          statement.location,
         );
         return;
       }
@@ -78,6 +96,7 @@ export class SemanticAnalyzer {
           declaredType,
           initializerType,
           `Cannot initialize variable '${statement.name}' of type '${declaredType}' with value of type '${initializerType}'.`,
+          statement.location,
         );
       }
 
@@ -112,7 +131,7 @@ export class SemanticAnalyzer {
 
     if (statement instanceof IfStatement) {
       const conditionType = this.visitExpression(statement.condition);
-      this.ensureBooleanCondition(conditionType, "if");
+      this.ensureBooleanCondition(conditionType, "if", statement.location);
       const baseEnvironment = this.environment;
       const thenEnvironment = baseEnvironment.fork();
 
@@ -134,7 +153,7 @@ export class SemanticAnalyzer {
     if (statement instanceof WhileStatement) {
       const baseEnvironment = this.environment;
       const conditionType = this.visitExpression(statement.condition);
-      this.ensureBooleanCondition(conditionType, "while");
+      this.ensureBooleanCondition(conditionType, "while", statement.location);
       const loopEnvironment = baseEnvironment.fork();
       this.environment = loopEnvironment;
       this.visitStatement(statement.body);
@@ -146,6 +165,7 @@ export class SemanticAnalyzer {
     this.pushMessage(
       SemanticMessageType.ERROR,
       `Unsupported statement type: ${statement satisfies never}`,
+      null,
     );
   }
 
@@ -171,6 +191,7 @@ export class SemanticAnalyzer {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Variable '${expression.name}' is not defined.`,
+          expression.location,
         );
         return null;
       }
@@ -179,6 +200,7 @@ export class SemanticAnalyzer {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Variable '${expression.name}' is not initialized.`,
+          expression.location,
         );
       }
       this.environment.useVariable(expression.name);
@@ -190,6 +212,7 @@ export class SemanticAnalyzer {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Variable '${expression.name}' is not defined.`,
+          expression.location,
         );
         return null;
       }
@@ -201,6 +224,7 @@ export class SemanticAnalyzer {
           variableType,
           valueType,
           `Cannot assign value of type '${valueType}' to variable '${expression.name}' of type '${variableType}'.`,
+          expression.location,
         );
       }
       this.environment.initializeVariable(expression.name);
@@ -210,17 +234,27 @@ export class SemanticAnalyzer {
     if (expression instanceof BinaryExpression) {
       const leftType = this.visitExpression(expression.left);
       const rightType = this.visitExpression(expression.right);
-      return this.getBinaryExpressionType(expression.operator, leftType, rightType);
+      return this.getBinaryExpressionType(
+        expression.operator,
+        leftType,
+        rightType,
+        expression.location,
+      );
     }
 
     if (expression instanceof UnaryExpression) {
       const rightType = this.visitExpression(expression.right);
-      return this.getUnaryExpressionType(expression.operator, rightType);
+      return this.getUnaryExpressionType(
+        expression.operator,
+        rightType,
+        expression.location,
+      );
     }
 
     this.pushMessage(
       SemanticMessageType.ERROR,
       `Unsupported expression type: ${expression satisfies never}`,
+      null,
     );
     return null;
   }
@@ -235,15 +269,20 @@ export class SemanticAnalyzer {
     );
   }
 
-  private pushMessage(type: SemanticMessageType, text: string): void {
-    this.messagesList.push({ type, text });
+  private pushMessage(
+    type: SemanticMessageType,
+    text: string,
+    location: SourceLocation | null,
+  ): void {
+    this.messagesList.push({ type, text, location });
   }
 
   private pushUnusedVariableWarnings(environment: SemanticEnvironment): void {
     for (const unusedVar of environment.getUnusedVariables()) {
       this.messagesList.push({
         type: SemanticMessageType.WARN,
-        text: `Variable '${unusedVar}' is unused.`,
+        text: `Variable '${unusedVar.name}' is unused.`,
+        location: unusedVar.location,
       });
     }
   }
@@ -283,7 +322,10 @@ export class SemanticAnalyzer {
     }
   }
 
-  private resolveDeclaredType(typeName: string | null): PrimitiveTypeName | null {
+  private resolveDeclaredType(
+    typeName: string | null,
+    location: SourceLocation,
+  ): PrimitiveTypeName | null {
     if (typeName === null) {
       return null;
     }
@@ -295,15 +337,14 @@ export class SemanticAnalyzer {
     this.pushMessage(
       SemanticMessageType.ERROR,
       `Unknown type '${typeName}'. Expected one of: number, string, boolean.`,
+      location,
     );
     return null;
   }
 
   private isPrimitiveType(typeName: string): typeName is PrimitiveTypeName {
     return (
-      typeName === "number" ||
-      typeName === "string" ||
-      typeName === "boolean"
+      typeName === "number" || typeName === "string" || typeName === "boolean"
     );
   }
 
@@ -311,20 +352,23 @@ export class SemanticAnalyzer {
     expected: PrimitiveTypeName,
     actual: PrimitiveTypeName,
     message: string,
+    location: SourceLocation,
   ): void {
     if (expected !== actual) {
-      this.pushMessage(SemanticMessageType.ERROR, message);
+      this.pushMessage(SemanticMessageType.ERROR, message, location);
     }
   }
 
   private ensureBooleanCondition(
     conditionType: PrimitiveTypeName | null,
     statementName: "if" | "while",
+    location: SourceLocation,
   ): void {
     if (conditionType !== null && conditionType !== "boolean") {
       this.pushMessage(
         SemanticMessageType.ERROR,
         `${statementName} condition must be boolean, got '${conditionType}'.`,
+        location,
       );
     }
   }
@@ -333,6 +377,7 @@ export class SemanticAnalyzer {
     operator: TokenType,
     leftType: PrimitiveTypeName | null,
     rightType: PrimitiveTypeName | null,
+    location: SourceLocation,
   ): PrimitiveTypeName | null {
     if (leftType === null || rightType === null) {
       return null;
@@ -349,6 +394,7 @@ export class SemanticAnalyzer {
           rightType,
           "number",
           "number",
+          location,
         );
       case TokenType.AND:
       case TokenType.OR:
@@ -358,6 +404,7 @@ export class SemanticAnalyzer {
           rightType,
           "boolean",
           "boolean",
+          location,
         );
       case TokenType.LT:
       case TokenType.LTEQ:
@@ -369,6 +416,7 @@ export class SemanticAnalyzer {
           rightType,
           "number",
           "boolean",
+          location,
         );
         return operandType === null ? null : "boolean";
       }
@@ -378,6 +426,7 @@ export class SemanticAnalyzer {
           this.pushMessage(
             SemanticMessageType.ERROR,
             `Operator '${this.formatOperator(operator)}' requires both operands to have the same type, got '${leftType}' and '${rightType}'.`,
+            location,
           );
           return null;
         }
@@ -386,6 +435,7 @@ export class SemanticAnalyzer {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Unsupported binary operator '${this.formatOperator(operator)}'.`,
+          location,
         );
         return null;
     }
@@ -394,6 +444,7 @@ export class SemanticAnalyzer {
   private getUnaryExpressionType(
     operator: TokenType,
     rightType: PrimitiveTypeName | null,
+    location: SourceLocation,
   ): PrimitiveTypeName | null {
     if (rightType === null) {
       return null;
@@ -405,6 +456,7 @@ export class SemanticAnalyzer {
           this.pushMessage(
             SemanticMessageType.ERROR,
             `Unary operator '-' requires a number operand, got '${rightType}'.`,
+            location,
           );
           return null;
         }
@@ -414,6 +466,7 @@ export class SemanticAnalyzer {
           this.pushMessage(
             SemanticMessageType.ERROR,
             `Unary operator '!' requires a boolean operand, got '${rightType}'.`,
+            location,
           );
           return null;
         }
@@ -422,6 +475,7 @@ export class SemanticAnalyzer {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Unsupported unary operator '${this.formatOperator(operator)}'.`,
+          location,
         );
         return null;
     }
@@ -433,11 +487,13 @@ export class SemanticAnalyzer {
     rightType: PrimitiveTypeName,
     expectedType: PrimitiveTypeName,
     resultType: PrimitiveTypeName,
+    location: SourceLocation,
   ): PrimitiveTypeName | null {
     if (leftType !== expectedType || rightType !== expectedType) {
       this.pushMessage(
         SemanticMessageType.ERROR,
         `Operator '${this.formatOperator(operator)}' requires ${expectedType} operands, got '${leftType}' and '${rightType}'.`,
+        location,
       );
       return null;
     }

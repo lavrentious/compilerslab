@@ -27,7 +27,9 @@ function analyzeSource(source: string): readonly SemanticMessage[] {
 
 describe("lexer", () => {
   test("tokenizes typed declarations with boolean and string literals", () => {
-    const tokens = new Lexer('var flag: boolean = false; print "ok";').tokenize();
+    const tokens = new Lexer(
+      'var flag: boolean = false; print "ok";',
+    ).tokenize();
 
     expect(tokens.map((token) => token.type)).toEqual([
       TokenType.VAR,
@@ -64,10 +66,12 @@ describe("semantic analyzer", () => {
       {
         type: SemanticMessageType.ERROR,
         text: "Variable 'x' is already defined.",
+        location: { line: 2, column: 5 },
       },
       {
         type: SemanticMessageType.WARN,
         text: "Variable 'x' is unused.",
+        location: { line: 1, column: 5 },
       },
     ]);
   });
@@ -78,6 +82,7 @@ describe("semantic analyzer", () => {
       {
         type: SemanticMessageType.WARN,
         text: "Variable 'z' is unused.",
+        location: { line: 3, column: 5 },
       },
     ]);
   });
@@ -88,6 +93,7 @@ describe("semantic analyzer", () => {
       {
         type: SemanticMessageType.ERROR,
         text: "Variable 'z' is not defined.",
+        location: { line: 5, column: 15 },
       },
     ]);
   });
@@ -98,10 +104,12 @@ describe("semantic analyzer", () => {
       {
         type: SemanticMessageType.WARN,
         text: "Variable 'j' is unused.",
+        location: { line: 16, column: 9 },
       },
       {
         type: SemanticMessageType.ERROR,
         text: "Variable 'j' is not defined.",
+        location: { line: 22, column: 7 },
       },
     ]);
   });
@@ -112,6 +120,7 @@ describe("semantic analyzer", () => {
       {
         type: SemanticMessageType.ERROR,
         text: "Variable 'z' is not initialized.",
+        location: { line: 5, column: 5 },
       },
     ]);
   });
@@ -122,14 +131,17 @@ describe("semantic analyzer", () => {
       {
         type: SemanticMessageType.ERROR,
         text: "Variable 'z' is not initialized.",
+        location: { line: 6, column: 5 },
       },
       {
         type: SemanticMessageType.WARN,
         text: "Variable 'j' is unused.",
+        location: { line: 13, column: 9 },
       },
       {
         type: SemanticMessageType.ERROR,
         text: "Variable 'j' is not defined.",
+        location: { line: 19, column: 7 },
       },
     ]);
   });
@@ -145,18 +157,22 @@ describe("semantic analyzer", () => {
       {
         type: SemanticMessageType.ERROR,
         text: "Cannot assign value of type 'string' to variable 'count' of type 'number'.",
+        location: { line: 6, column: 7 },
       },
       {
         type: SemanticMessageType.ERROR,
         text: "if condition must be boolean, got 'number'.",
+        location: { line: 8, column: 1 },
       },
       {
         type: SemanticMessageType.ERROR,
         text: "Unary operator '!' requires a boolean operand, got 'number'.",
+        location: { line: 12, column: 7 },
       },
       {
         type: SemanticMessageType.WARN,
         text: "Variable 'pending' is unused.",
+        location: { line: 3, column: 5 },
       },
     ]);
   });
@@ -166,10 +182,12 @@ describe("semantic analyzer", () => {
       {
         type: SemanticMessageType.ERROR,
         text: "Variable 'x' requires a type annotation or initializer.",
+        location: { line: 1, column: 5 },
       },
       {
         type: SemanticMessageType.ERROR,
         text: "Variable 'x' is not defined.",
+        location: { line: 1, column: 14 },
       },
     ]);
   });

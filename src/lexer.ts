@@ -28,7 +28,7 @@ export class Lexer {
         continue;
       }
 
-      if (current === "\"") {
+      if (current === '"') {
         this.tokenizeString(result);
         continue;
       }
@@ -66,13 +66,13 @@ export class Lexer {
     this.next();
 
     let value = "";
-    while (this.position < this.length && this.peek() !== "\"") {
+    while (this.position < this.length && this.peek() !== '"') {
       const current = this.next();
       if (current === "\\") {
         const escaped = this.next();
         switch (escaped) {
-          case "\"":
-            value += "\"";
+          case '"':
+            value += '"';
             break;
           case "\\":
             value += "\\";
@@ -98,7 +98,7 @@ export class Lexer {
       value += current;
     }
 
-    if (this.peek() !== "\"") {
+    if (this.peek() !== '"') {
       throw new Error(`Unterminated string literal at position ${start}`);
     }
 

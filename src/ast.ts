@@ -1,5 +1,10 @@
 import { TokenType } from "./types.ts";
 
+export interface SourceLocation {
+  line: number;
+  column: number;
+}
+
 export type Expression =
   | NumberExpression
   | StringExpression
@@ -14,25 +19,37 @@ export type PrimitiveTypeName = "number" | "string" | "boolean";
 export class NumberExpression {
   readonly kind = "NumberExpression";
 
-  constructor(public readonly value: number) {}
+  constructor(
+    public readonly value: number,
+    public readonly location: SourceLocation,
+  ) {}
 }
 
 export class StringExpression {
   readonly kind = "StringExpression";
 
-  constructor(public readonly value: string) {}
+  constructor(
+    public readonly value: string,
+    public readonly location: SourceLocation,
+  ) {}
 }
 
 export class BooleanExpression {
   readonly kind = "BooleanExpression";
 
-  constructor(public readonly value: boolean) {}
+  constructor(
+    public readonly value: boolean,
+    public readonly location: SourceLocation,
+  ) {}
 }
 
 export class VariableExpression {
   readonly kind = "VariableExpression";
 
-  constructor(public readonly name: string) {}
+  constructor(
+    public readonly name: string,
+    public readonly location: SourceLocation,
+  ) {}
 }
 
 export class BinaryExpression {
@@ -42,6 +59,7 @@ export class BinaryExpression {
     public readonly left: Expression,
     public readonly operator: TokenType,
     public readonly right: Expression,
+    public readonly location: SourceLocation,
   ) {}
 }
 
@@ -51,6 +69,7 @@ export class UnaryExpression {
   constructor(
     public readonly operator: TokenType,
     public readonly right: Expression,
+    public readonly location: SourceLocation,
   ) {}
 }
 
@@ -60,6 +79,7 @@ export class AssignExpression {
   constructor(
     public readonly name: string,
     public readonly value: Expression,
+    public readonly location: SourceLocation,
   ) {}
 }
 
@@ -74,13 +94,19 @@ export type Statement =
 export class ExpressionStatement {
   readonly kind = "ExpressionStatement";
 
-  constructor(public readonly expression: Expression) {}
+  constructor(
+    public readonly expression: Expression,
+    public readonly location: SourceLocation,
+  ) {}
 }
 
 export class PrintStatement {
   readonly kind = "PrintStatement";
 
-  constructor(public readonly expression: Expression) {}
+  constructor(
+    public readonly expression: Expression,
+    public readonly location: SourceLocation,
+  ) {}
 }
 
 export class VarStatement {
@@ -90,13 +116,18 @@ export class VarStatement {
     public readonly name: string,
     public readonly typeName: string | null,
     public readonly initializer: Expression | null,
+    public readonly location: SourceLocation,
+    public readonly typeLocation: SourceLocation | null = null,
   ) {}
 }
 
 export class BlockStatement {
   readonly kind = "BlockStatement";
 
-  constructor(public readonly statements: Statement[]) {}
+  constructor(
+    public readonly statements: Statement[],
+    public readonly location: SourceLocation,
+  ) {}
 }
 
 export class IfStatement {
@@ -105,6 +136,7 @@ export class IfStatement {
   constructor(
     public readonly condition: Expression,
     public readonly thenBranch: Statement,
+    public readonly location: SourceLocation,
     public readonly elseBranch: Statement | null = null,
   ) {}
 }
@@ -115,5 +147,6 @@ export class WhileStatement {
   constructor(
     public readonly condition: Expression,
     public readonly body: Statement,
+    public readonly location: SourceLocation,
   ) {}
 }

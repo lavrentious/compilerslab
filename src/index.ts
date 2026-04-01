@@ -4,7 +4,11 @@ import chalk from "chalk";
 import { AstPrinter } from "./ast-printer.ts";
 import { Lexer } from "./lexer.ts";
 import { Parser } from "./parser.ts";
-import { SemanticAnalyzer, SemanticMessageType } from "./semantic-analyzer.ts";
+import {
+  SemanticAnalyzer,
+  SemanticMessageType,
+  type SemanticMessage,
+} from "./semantic-analyzer.ts";
 
 type OutputMode = "tokens" | "ast" | "tree" | "semantic";
 
@@ -93,7 +97,8 @@ async function main(): Promise<void> {
       );
       for (const message of sortedMessages) {
         const label = formatSemanticLabel(message.type);
-        console.log(`- [${label}] ${message.text}`);
+        const location = formatSemanticLocation(message);
+        console.log(`- [${label}] ${location}${message.text}`);
       }
 
       if (hasErrors) {
@@ -104,7 +109,9 @@ async function main(): Promise<void> {
     }
 
     console.log(
-      chalk.green("Semantic analysis completed successfully. No messages found."),
+      chalk.green(
+        "Semantic analysis completed successfully. No messages found.",
+      ),
     );
     return;
   }
@@ -202,4 +209,12 @@ main().catch((error: unknown) => {
 function formatSemanticLabel(type: SemanticMessageType): string {
   const label = type.padEnd(SemanticMessageType.ERROR.length);
   return SEMANTIC_MESSAGE_COLOR[type](label);
+}
+
+function formatSemanticLocation(message: SemanticMessage): string {
+  if (message.location === null) {
+    return "";
+  }
+
+  return `Line ${message.location.line}, Col ${message.location.column}: `;
 }

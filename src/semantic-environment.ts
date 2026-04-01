@@ -1,9 +1,10 @@
-import type { PrimitiveTypeName } from "./ast.ts";
+import type { PrimitiveTypeName, SourceLocation } from "./ast.ts";
 
 interface VariableState {
   initialized: boolean;
   used: boolean;
   type: PrimitiveTypeName;
+  location: SourceLocation;
 }
 
 export class SemanticEnvironment {
@@ -15,11 +16,17 @@ export class SemanticEnvironment {
     name: string,
     type: PrimitiveTypeName,
     initialized: boolean,
+    location: SourceLocation,
   ): boolean {
     if (this.definedVariables.has(name)) {
       return false;
     }
-    this.definedVariables.set(name, { initialized, used: false, type });
+    this.definedVariables.set(name, {
+      initialized,
+      used: false,
+      type,
+      location,
+    });
     return true;
   }
 
@@ -75,12 +82,13 @@ export class SemanticEnvironment {
     return this.parent?.getVariableType(name) ?? null;
   }
 
-  getUnusedVariables(): Set<string> {
-    const unusedVariables = new Set<string>();
+  getUnusedVariables(): Array<{ name: string; location: SourceLocation }> {
+    const unusedVariables: Array<{ name: string; location: SourceLocation }> =
+      [];
 
     for (const [name, variable] of this.definedVariables) {
       if (!variable.used) {
-        unusedVariables.add(name);
+        unusedVariables.push({ name, location: variable.location });
       }
     }
 
