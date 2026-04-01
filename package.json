@@ -13,7 +13,7 @@
     "demo:parser": "bun run src/demo-parser.ts",
     "test": "bun test",
     "check": "bunx tsc --noEmit",
-    "build": "bun build ./src/index.ts --outdir ./dist"
+    "build": "bun build ./src/index.ts --outdir ./dist --production"
   },
   "devDependencies": {
     "@types/bun": "latest"
