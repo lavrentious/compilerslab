@@ -2,6 +2,8 @@ export enum TokenType {
   NUMBER = "NUMBER",
   ID = "ID",
   STRING = "STRING",
+  TRUE = "TRUE",
+  FALSE = "FALSE",
   VAR = "VAR",
   PRINT = "PRINT",
   IF = "IF",
@@ -25,6 +27,7 @@ export enum TokenType {
   RPAREN = "RPAREN",
   LBRACE = "LBRACE",
   RBRACE = "RBRACE",
+  COLON = "COLON",
   SEMICOLON = "SEMICOLON",
   EOF = "EOF",
 }

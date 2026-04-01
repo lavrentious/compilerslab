@@ -1,0 +1,12 @@
+var count: number = 2;
+var limit = 10;
+var label: string = "ready";
+var enabled = true;
+var pending: boolean;
+
+pending = enabled && count < limit;
+
+if (pending) {
+    print label;
+    print count + limit;
+}

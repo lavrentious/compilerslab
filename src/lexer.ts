@@ -28,6 +28,11 @@ export class Lexer {
         continue;
       }
 
+      if (current === "\"") {
+        this.tokenizeString(result);
+        continue;
+      }
+
       if (/[A-Za-z]/u.test(current)) {
         this.tokenizeWord(result);
         continue;
@@ -54,6 +59,53 @@ export class Lexer {
     result.push(new Token(TokenType.NUMBER, numberValue, start, line, column));
   }
 
+  private tokenizeString(result: Token[]): void {
+    const start = this.position;
+    const line = this.line;
+    const column = this.column;
+    this.next();
+
+    let value = "";
+    while (this.position < this.length && this.peek() !== "\"") {
+      const current = this.next();
+      if (current === "\\") {
+        const escaped = this.next();
+        switch (escaped) {
+          case "\"":
+            value += "\"";
+            break;
+          case "\\":
+            value += "\\";
+            break;
+          case "n":
+            value += "\n";
+            break;
+          case "t":
+            value += "\t";
+            break;
+          default:
+            throw new Error(
+              `Unexpected escape sequence '\\${escaped}' at position ${this.position - 1}`,
+            );
+        }
+        continue;
+      }
+
+      if (current === "\n" || current === "\0") {
+        throw new Error(`Unterminated string literal at position ${start}`);
+      }
+
+      value += current;
+    }
+
+    if (this.peek() !== "\"") {
+      throw new Error(`Unterminated string literal at position ${start}`);
+    }
+
+    this.next();
+    result.push(new Token(TokenType.STRING, value, start, line, column));
+  }
+
   private tokenizeWord(result: Token[]): void {
     const start = this.position;
     const line = this.line;
@@ -66,6 +118,12 @@ export class Lexer {
     switch (word) {
       case "var":
         this.addToken(result, TokenType.VAR, word, start, line, column);
+        break;
+      case "true":
+        this.addToken(result, TokenType.TRUE, word, start, line, column);
+        break;
+      case "false":
+        this.addToken(result, TokenType.FALSE, word, start, line, column);
         break;
       case "print":
         this.addToken(result, TokenType.PRINT, word, start, line, column);
@@ -177,6 +235,10 @@ export class Lexer {
       case ";":
         this.next();
         this.addToken(result, TokenType.SEMICOLON, ";", start, line, column);
+        return;
+      case ":":
+        this.next();
+        this.addToken(result, TokenType.COLON, ":", start, line, column);
         return;
       case "(":
         this.next();

@@ -1,16 +1,25 @@
+import type { PrimitiveTypeName } from "./ast.ts";
+
+interface VariableState {
+  initialized: boolean;
+  used: boolean;
+  type: PrimitiveTypeName;
+}
+
 export class SemanticEnvironment {
-  private readonly definedVariables = new Map<
-    string,
-    { initialized: boolean; used: boolean }
-  >();
+  private readonly definedVariables = new Map<string, VariableState>();
 
   constructor(private readonly parent: SemanticEnvironment | null = null) {}
 
-  defineVariable(name: string, initialized: boolean): boolean {
+  defineVariable(
+    name: string,
+    type: PrimitiveTypeName,
+    initialized: boolean,
+  ): boolean {
     if (this.definedVariables.has(name)) {
       return false;
     }
-    this.definedVariables.set(name, { initialized, used: false });
+    this.definedVariables.set(name, { initialized, used: false, type });
     return true;
   }
 
@@ -55,6 +64,15 @@ export class SemanticEnvironment {
       return true;
     }
     return this.parent?.isVariableUsed(name) ?? false;
+  }
+
+  getVariableType(name: string): PrimitiveTypeName | null {
+    const variable = this.definedVariables.get(name);
+    if (variable !== undefined) {
+      return variable.type;
+    }
+
+    return this.parent?.getVariableType(name) ?? null;
   }
 
   getUnusedVariables(): Set<string> {
@@ -108,5 +126,15 @@ export class SemanticEnvironment {
     }
 
     this.parent?.setVariableUsed(name, used);
+  }
+
+  setVariableType(name: string, type: PrimitiveTypeName): void {
+    const variable = this.definedVariables.get(name);
+    if (variable !== undefined) {
+      variable.type = type;
+      return;
+    }
+
+    this.parent?.setVariableType(name, type);
   }
 }

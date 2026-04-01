@@ -3,10 +3,13 @@ import { TokenType } from "./types.ts";
 export type Expression =
   | NumberExpression
   | StringExpression
+  | BooleanExpression
   | VariableExpression
   | BinaryExpression
   | UnaryExpression
   | AssignExpression;
+
+export type PrimitiveTypeName = "number" | "string" | "boolean";
 
 export class NumberExpression {
   readonly kind = "NumberExpression";
@@ -18,6 +21,12 @@ export class StringExpression {
   readonly kind = "StringExpression";
 
   constructor(public readonly value: string) {}
+}
+
+export class BooleanExpression {
+  readonly kind = "BooleanExpression";
+
+  constructor(public readonly value: boolean) {}
 }
 
 export class VariableExpression {
@@ -79,6 +88,7 @@ export class VarStatement {
 
   constructor(
     public readonly name: string,
+    public readonly typeName: string | null,
     public readonly initializer: Expression | null,
   ) {}
 }

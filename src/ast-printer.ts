@@ -1,11 +1,13 @@
 import {
   AssignExpression,
   BinaryExpression,
+  BooleanExpression,
   BlockStatement,
   ExpressionStatement,
   IfStatement,
   NumberExpression,
   PrintStatement,
+  StringExpression,
   UnaryExpression,
   VariableExpression,
   VarStatement,
@@ -30,7 +32,8 @@ export class AstPrinter {
     const childIndent = indent + (isLast ? "    " : "│   ");
 
     if (node instanceof VarStatement) {
-      console.log(`${indent}${marker}VarStatement: ${node.name}`);
+      const typeSuffix = node.typeName === null ? "" : `: ${node.typeName}`;
+      console.log(`${indent}${marker}VarStatement: ${node.name}${typeSuffix}`);
       if (node.initializer !== null) {
         this.printNode(node.initializer, childIndent, true);
       }
@@ -99,6 +102,16 @@ export class AstPrinter {
 
     if (node instanceof NumberExpression) {
       console.log(`${indent}${marker}Number: ${node.value}`);
+      return;
+    }
+
+    if (node instanceof StringExpression) {
+      console.log(`${indent}${marker}String: ${JSON.stringify(node.value)}`);
+      return;
+    }
+
+    if (node instanceof BooleanExpression) {
+      console.log(`${indent}${marker}Boolean: ${node.value}`);
       return;
     }
 

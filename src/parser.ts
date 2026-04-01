@@ -1,11 +1,13 @@
 import {
   AssignExpression,
   BinaryExpression,
+  BooleanExpression,
   BlockStatement,
   ExpressionStatement,
   IfStatement,
   NumberExpression,
   PrintStatement,
+  StringExpression,
   UnaryExpression,
   VariableExpression,
   VarStatement,
@@ -57,7 +59,12 @@ export class Parser {
 
   private parseVarDeclaration(): Statement {
     const name = this.consume(TokenType.ID, "Expected variable name.");
+    let typeName: string | null = null;
     let initializer: Expression | null = null;
+
+    if (this.match(TokenType.COLON)) {
+      typeName = this.consume(TokenType.ID, "Expected type name after ':'.").value;
+    }
 
     if (this.match(TokenType.EQ)) {
       initializer = this.parseExpression();
@@ -67,7 +74,7 @@ export class Parser {
       TokenType.SEMICOLON,
       "Expected ';' after variable declaration.",
     );
-    return new VarStatement(name.value, initializer);
+    return new VarStatement(name.value, typeName, initializer);
   }
 
   private parseIfStatement(): Statement {
@@ -227,6 +234,18 @@ export class Parser {
   private parsePrimary(): Expression {
     if (this.match(TokenType.NUMBER)) {
       return new NumberExpression(Number(this.previous().value));
+    }
+
+    if (this.match(TokenType.STRING)) {
+      return new StringExpression(this.previous().value);
+    }
+
+    if (this.match(TokenType.TRUE)) {
+      return new BooleanExpression(true);
+    }
+
+    if (this.match(TokenType.FALSE)) {
+      return new BooleanExpression(false);
     }
 
     if (this.match(TokenType.ID)) {

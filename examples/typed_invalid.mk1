@@ -1,0 +1,12 @@
+var count: number = 2;
+var label = "ready";
+var pending: boolean;
+
+pending = count < 10;
+count = "three";
+
+if (count) {
+    print label;
+}
+
+print !count;
