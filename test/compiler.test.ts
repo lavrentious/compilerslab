@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { Lexer } from "./lexer.ts";
-import { Parser } from "./parser.ts";
+import { Lexer } from "../src/lexer.ts";
+import { Parser } from "../src/parser.ts";
 import {
   SemanticAnalyzer,
   SemanticMessageType,
   type SemanticMessage,
-} from "./semantic-analyzer.ts";
-import { TokenType } from "./types.ts";
+} from "../src/semantic-analyzer.ts";
+import { TokenType } from "../src/types.ts";
 
 async function readExampleFile(name: string): Promise<string> {
   const path = new URL(`../examples/${name}`, import.meta.url).pathname;
