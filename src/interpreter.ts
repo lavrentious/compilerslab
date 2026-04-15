@@ -58,9 +58,7 @@ export class Interpreter {
   private evaluateExpression(expr: Expression, env: RuntimeEnvironment): any {
     switch (expr.kind) {
       case "NumberExpression":
-        return expr.value;
       case "StringExpression":
-        return expr.value;
       case "BooleanExpression":
         return expr.value;
       case "VariableExpression":
