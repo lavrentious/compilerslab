@@ -2,15 +2,17 @@
 
 import chalk from "chalk";
 import { AstPrinter } from "./ast-printer.ts";
+import { Interpreter } from "./interpreter.ts";
 import { Lexer } from "./lexer.ts";
 import { Parser } from "./parser.ts";
+import { RuntimeEnvironment } from "./runtime-environment.ts";
 import {
   SemanticAnalyzer,
   SemanticMessageType,
   type SemanticMessage,
 } from "./semantic-analyzer.ts";
 
-type OutputMode = "tokens" | "ast" | "tree" | "semantic";
+type OutputMode = "tokens" | "ast" | "tree" | "semantic" | "run";
 
 interface CliOptions {
   code: string | null;
@@ -46,6 +48,7 @@ Options:
   --ast                Print the parsed AST as an object
   --tree               Print the parsed AST as a tree (default)
   --semantic           Run semantic analysis and print errors or success
+  --run                Run the code
   --help, -h           Show this help
 
 Input:
@@ -116,6 +119,24 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (options.mode === "run") {
+    const analyzer = new SemanticAnalyzer();
+    analyzer.analyze(ast);
+    if (analyzer.hasErrors) {
+      for (const message of analyzer.messages) {
+        if (message.type === SemanticMessageType.ERROR) {
+          const location = formatSemanticLocation(message);
+          console.error(`[error] ${location}${message.text}`);
+        }
+      }
+      process.exit(1);
+    }
+    const env = new RuntimeEnvironment();
+    const interpreter = new Interpreter(env, ast);
+    interpreter.run();
+    return;
+  }
+
   new AstPrinter().printAst(ast);
 }
 
@@ -159,6 +180,9 @@ function parseArgs(args: string[]): CliOptions {
       case "--semantic":
       case "--check":
         options.mode = "semantic";
+        break;
+      case "--run":
+        options.mode = "run";
         break;
       default:
         if (arg.startsWith("--")) {
