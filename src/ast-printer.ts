@@ -3,10 +3,13 @@ import {
   BinaryExpression,
   BooleanExpression,
   BlockStatement,
+  CallExpression,
   ExpressionStatement,
+  FunctionStatement,
   IfStatement,
   NumberExpression,
   PrintStatement,
+  ReturnStatement,
   StringExpression,
   UnaryExpression,
   VariableExpression,
@@ -117,6 +120,27 @@ export class AstPrinter {
 
     if (node instanceof VariableExpression) {
       console.log(`${indent}${marker}Variable: ${node.name}`);
+      return;
+    }
+
+    if (node instanceof FunctionStatement) {
+      const paramList = node.params.length > 0 ? `(${node.params.join(", ")})` : "()";
+      console.log(`${indent}${marker}Function: ${node.name}${paramList}`);
+      this.printNode(node.body, childIndent, true);
+      return;
+    }
+
+    if (node instanceof CallExpression) {
+      console.log(`${indent}${marker}Call: ${node.callee}`);
+      node.args.forEach((arg, index) => {
+        this.printNode(arg, childIndent, index === node.args.length - 1);
+      });
+      return;
+    }
+
+    if (node instanceof ReturnStatement) {
+      console.log(`${indent}${marker}ReturnStatement`);
+      this.printNode(node.value, childIndent, true);
       return;
     }
 
