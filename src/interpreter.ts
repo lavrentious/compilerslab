@@ -2,6 +2,10 @@ import type { Expression, Statement } from "./ast";
 import { RuntimeEnvironment } from "./runtime-environment";
 import { TokenType } from "./types";
 
+class ReturnValue {
+  constructor(public readonly value: any) {}
+}
+
 export class Interpreter {
   constructor(
     private readonly runtimeEnvironment: RuntimeEnvironment,
@@ -51,6 +55,13 @@ export class Interpreter {
           this.executeStatement(stmt.body, env);
         }
         break;
+      }
+      case "FunctionStatement":
+        env.defineFunction(stmt.name, stmt);
+        break;
+      case "ReturnStatement": {
+        const val = stmt.value !== null ? this.evaluateExpression(stmt.value, env) : null;
+        throw new ReturnValue(val);
       }
     }
   }
@@ -105,6 +116,23 @@ export class Interpreter {
         const value = this.evaluateExpression(expr.value, env);
         env.assignVariable(expr.name, value);
         return value;
+      }
+      case "CallExpression": {
+        const fn = env.getFunction(expr.callee);
+        const args = expr.args.map((a) => this.evaluateExpression(a, env));
+        const callEnv = new RuntimeEnvironment(env);
+        for (let i = 0; i < fn.params.length; i++) {
+          callEnv.setVariable(fn.params[i]!, args[i] ?? null);
+        }
+        try {
+          for (const s of fn.body.statements) {
+            this.executeStatement(s, callEnv);
+          }
+        } catch (e) {
+          if (e instanceof ReturnValue) return e.value;
+          throw e;
+        }
+        return null;
       }
     }
   }

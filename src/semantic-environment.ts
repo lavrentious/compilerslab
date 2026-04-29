@@ -3,18 +3,24 @@ import type { PrimitiveTypeName, SourceLocation } from "./ast.ts";
 interface VariableState {
   initialized: boolean;
   used: boolean;
-  type: PrimitiveTypeName;
+  type: PrimitiveTypeName | null;
+  location: SourceLocation;
+}
+
+interface FunctionInfo {
+  arity: number;
   location: SourceLocation;
 }
 
 export class SemanticEnvironment {
   private readonly definedVariables = new Map<string, VariableState>();
+  private readonly functions = new Map<string, FunctionInfo>();
 
   constructor(private readonly parent: SemanticEnvironment | null = null) {}
 
   defineVariable(
     name: string,
-    type: PrimitiveTypeName,
+    type: PrimitiveTypeName | null,
     initialized: boolean,
     location: SourceLocation,
   ): boolean {
@@ -144,5 +150,22 @@ export class SemanticEnvironment {
     }
 
     this.parent?.setVariableType(name, type);
+  }
+
+  defineFunction(name: string, arity: number, location: SourceLocation): boolean {
+    if (this.functions.has(name)) return false;
+    this.functions.set(name, { arity, location });
+    return true;
+  }
+
+  isFunctionDefined(name: string): boolean {
+    if (this.functions.has(name)) return true;
+    return this.parent?.isFunctionDefined(name) ?? false;
+  }
+
+  getFunctionArity(name: string): number | null {
+    const info = this.functions.get(name);
+    if (info !== undefined) return info.arity;
+    return this.parent?.getFunctionArity(name) ?? null;
   }
 }

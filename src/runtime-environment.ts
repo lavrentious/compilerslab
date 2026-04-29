@@ -1,5 +1,8 @@
+import type { FunctionStatement } from "./ast.ts";
+
 export class RuntimeEnvironment {
   private readonly variables = new Map<string, any>();
+  private readonly functions = new Map<string, FunctionStatement>();
 
   constructor(private readonly parent: RuntimeEnvironment | null = null) {}
 
@@ -27,5 +30,15 @@ export class RuntimeEnvironment {
       return this.parent.getVariable(name);
     }
     throw new ReferenceError(`Variable "${name}" is not defined.`);
+  }
+
+  defineFunction(name: string, fn: FunctionStatement): void {
+    this.functions.set(name, fn);
+  }
+
+  getFunction(name: string): FunctionStatement {
+    if (this.functions.has(name)) return this.functions.get(name)!;
+    if (this.parent !== null) return this.parent.getFunction(name);
+    throw new ReferenceError(`Function "${name}" is not defined.`);
   }
 }

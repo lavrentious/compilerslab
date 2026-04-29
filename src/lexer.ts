@@ -137,6 +137,12 @@ export class Lexer {
       case "while":
         this.addToken(result, TokenType.WHILE, word, start, line, column);
         break;
+      case "fun":
+        this.addToken(result, TokenType.FUN, word, start, line, column);
+        break;
+      case "return":
+        this.addToken(result, TokenType.RETURN, word, start, line, column);
+        break;
       default:
         this.addToken(result, TokenType.ID, word, start, line, column);
         break;
@@ -247,6 +253,10 @@ export class Lexer {
       case ")":
         this.next();
         this.addToken(result, TokenType.RPAREN, ")", start, line, column);
+        return;
+      case ",":
+        this.next();
+        this.addToken(result, TokenType.COMMA, ",", start, line, column);
         return;
       case "{":
         this.next();

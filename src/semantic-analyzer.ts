@@ -3,10 +3,13 @@ import {
   BooleanExpression,
   BinaryExpression,
   BlockStatement,
+  CallExpression,
   ExpressionStatement,
+  FunctionStatement,
   IfStatement,
   NumberExpression,
   PrintStatement,
+  ReturnStatement,
   StringExpression,
   UnaryExpression,
   VariableExpression,
@@ -66,7 +69,7 @@ export class SemanticAnalyzer {
         variableType = initializerType;
       }
 
-      if (variableType === null) {
+      if (variableType === null && statement.initializer === null) {
         this.pushMessage(
           SemanticMessageType.ERROR,
           `Variable '${statement.name}' requires a type annotation or initializer.`,
@@ -162,6 +165,39 @@ export class SemanticAnalyzer {
       return;
     }
 
+    if (statement instanceof FunctionStatement) {
+      if (!this.environment.defineFunction(statement.name, statement.params.length, statement.location)) {
+        this.pushMessage(
+          SemanticMessageType.ERROR,
+          `Function '${statement.name}' is already defined.`,
+          statement.location,
+        );
+        return;
+      }
+
+      const previousEnvironment = this.environment;
+      this.environment = new SemanticEnvironment(previousEnvironment);
+
+      for (const param of statement.params) {
+        this.environment.defineVariable(param, null, true, statement.location);
+      }
+
+      for (const innerStatement of statement.body.statements) {
+        this.visitStatement(innerStatement);
+      }
+
+      this.pushUnusedVariableWarnings(this.environment);
+      this.environment = previousEnvironment;
+      return;
+    }
+
+    if (statement instanceof ReturnStatement) {
+      if (statement.value !== null) {
+        this.visitExpression(statement.value);
+      }
+      return;
+    }
+
     this.pushMessage(
       SemanticMessageType.ERROR,
       `Unsupported statement type: ${statement satisfies never}`,
@@ -249,6 +285,31 @@ export class SemanticAnalyzer {
         rightType,
         expression.location,
       );
+    }
+
+    if (expression instanceof CallExpression) {
+      if (!this.environment.isFunctionDefined(expression.callee)) {
+        this.pushMessage(
+          SemanticMessageType.ERROR,
+          `Function '${expression.callee}' is not defined.`,
+          expression.location,
+        );
+        return null;
+      }
+
+      const arity = this.environment.getFunctionArity(expression.callee)!;
+      if (expression.args.length !== arity) {
+        this.pushMessage(
+          SemanticMessageType.ERROR,
+          `Function '${expression.callee}' expects ${arity} argument(s), got ${expression.args.length}.`,
+          expression.location,
+        );
+      }
+
+      for (const arg of expression.args) {
+        this.visitExpression(arg);
+      }
+      return null;
     }
 
     this.pushMessage(

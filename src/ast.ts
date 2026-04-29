@@ -12,7 +12,8 @@ export type Expression =
   | VariableExpression
   | BinaryExpression
   | UnaryExpression
-  | AssignExpression;
+  | AssignExpression
+  | CallExpression;
 
 export type PrimitiveTypeName = "number" | "string" | "boolean";
 
@@ -83,13 +84,25 @@ export class AssignExpression {
   ) {}
 }
 
+export class CallExpression {
+  readonly kind = "CallExpression";
+
+  constructor(
+    public readonly callee: string,
+    public readonly args: Expression[],
+    public readonly location: SourceLocation,
+  ) {}
+}
+
 export type Statement =
   | ExpressionStatement
   | PrintStatement
   | VarStatement
   | BlockStatement
   | IfStatement
-  | WhileStatement;
+  | WhileStatement
+  | FunctionStatement
+  | ReturnStatement;
 
 export class ExpressionStatement {
   readonly kind = "ExpressionStatement";
@@ -147,6 +160,26 @@ export class WhileStatement {
   constructor(
     public readonly condition: Expression,
     public readonly body: Statement,
+    public readonly location: SourceLocation,
+  ) {}
+}
+
+export class FunctionStatement {
+  readonly kind = "FunctionStatement";
+
+  constructor(
+    public readonly name: string,
+    public readonly params: string[],
+    public readonly body: BlockStatement,
+    public readonly location: SourceLocation,
+  ) {}
+}
+
+export class ReturnStatement {
+  readonly kind = "ReturnStatement";
+
+  constructor(
+    public readonly value: Expression | null,
     public readonly location: SourceLocation,
   ) {}
 }

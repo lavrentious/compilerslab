@@ -3,10 +3,13 @@ import {
   BinaryExpression,
   BooleanExpression,
   BlockStatement,
+  CallExpression,
   ExpressionStatement,
+  FunctionStatement,
   IfStatement,
   NumberExpression,
   PrintStatement,
+  ReturnStatement,
   StringExpression,
   UnaryExpression,
   VariableExpression,
@@ -30,11 +33,36 @@ export class Parser {
   }
 
   private parseDeclaration(): Statement {
+    if (this.match(TokenType.FUN)) {
+      return this.parseFunctionDeclaration();
+    }
+
     if (this.match(TokenType.VAR)) {
       return this.parseVarDeclaration();
     }
 
     return this.parseStatement();
+  }
+
+  private parseFunctionDeclaration(): Statement {
+    const keyword = this.previous();
+    const name = this.consume(TokenType.ID, "Expected function name.");
+    this.consume(TokenType.LPAREN, "Expected '(' after function name.");
+
+    const params: string[] = [];
+    if (!this.check(TokenType.RPAREN)) {
+      do {
+        params.push(this.consume(TokenType.ID, "Expected parameter name.").value);
+      } while (this.match(TokenType.COMMA));
+    }
+    this.consume(TokenType.RPAREN, "Expected ')' after parameters.");
+    this.consume(TokenType.LBRACE, "Expected '{' before function body.");
+
+    const body = new BlockStatement(
+      this.parseBlock(),
+      this.locationFromToken(keyword),
+    );
+    return new FunctionStatement(name.value, params, body, this.locationFromToken(keyword));
   }
 
   private parseStatement(): Statement {
@@ -44,6 +72,10 @@ export class Parser {
 
     if (this.match(TokenType.WHILE)) {
       return this.parseWhileStatement(this.previous());
+    }
+
+    if (this.match(TokenType.RETURN)) {
+      return this.parseReturnStatement(this.previous());
     }
 
     if (this.match(TokenType.PRINT)) {
@@ -124,6 +156,15 @@ export class Parser {
       body,
       this.locationFromToken(whileToken),
     );
+  }
+
+  private parseReturnStatement(returnToken: Token): Statement {
+    let value: Expression | null = null;
+    if (!this.check(TokenType.SEMICOLON)) {
+      value = this.parseExpression();
+    }
+    this.consume(TokenType.SEMICOLON, "Expected ';' after return value.");
+    return new ReturnStatement(value, this.locationFromToken(returnToken));
   }
 
   private parsePrintStatement(printToken: Token): Statement {
@@ -301,7 +342,31 @@ export class Parser {
       );
     }
 
-    return this.parsePrimary();
+    return this.parseCall();
+  }
+
+  private parseCall(): Expression {
+    let expr = this.parsePrimary();
+
+    while (this.match(TokenType.LPAREN)) {
+      const paren = this.previous();
+      const args: Expression[] = [];
+      if (!this.check(TokenType.RPAREN)) {
+        do {
+          args.push(this.parseExpression());
+        } while (this.match(TokenType.COMMA));
+      }
+      this.consume(TokenType.RPAREN, "Expected ')' after arguments.");
+
+      if (!(expr instanceof VariableExpression)) {
+        throw new Error(
+          `[Parser Error] Line ${paren.line}, Col ${paren.column}: Expected function name before '('.`,
+        );
+      }
+      expr = new CallExpression(expr.name, args, this.locationFromToken(paren));
+    }
+
+    return expr;
   }
 
   private parsePrimary(): Expression {
