@@ -3,6 +3,7 @@
 import chalk from "chalk";
 import { Command } from "commander";
 import { AstPrinter } from "./ast-printer.ts";
+import { AstOptimizer } from "./ast-optimizer.ts";
 import { Interpreter } from "./interpreter.ts";
 import { Lexer } from "./lexer.ts";
 import { Parser } from "./parser.ts";
@@ -119,6 +120,21 @@ inputOptions(
   }
 
   if (analyzer.hasErrors) process.exit(1);
+});
+
+inputOptions(
+  program
+    .command("optimize")
+    .description("print AST before and after constant folding"),
+).action(async (options: InputOptions) => {
+  const source = await resolveSource(options);
+  const ast = parseSource(source);
+  const printer = new AstPrinter();
+  console.log("=== BEFORE OPTIMIZATION ===");
+  printer.printAst(ast);
+  const optimized = new AstOptimizer().optimize(ast);
+  console.log("\n=== AFTER OPTIMIZATION ===");
+  printer.printAst(optimized);
 });
 
 inputOptions(

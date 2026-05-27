@@ -1,5 +1,10 @@
+var a = 5 + 5 + 5;
+var b = "hello" + " " + "world";
+var c = 10 * 3 - 5;
+
 var x = 10;
 var y = 20;
+
 
 if (x < y) {
     print x + y * 2;
@@ -8,3 +13,10 @@ if (x < y) {
         x = x - 1;
     }
 }
+
+print("z...");
+var z = 0;
+while (z < 100000000) {
+    z = z + 1;
+}
+print(z);
